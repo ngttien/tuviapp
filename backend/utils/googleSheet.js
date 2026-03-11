@@ -74,9 +74,9 @@ const updateSheetStatus = async (email, newStatus) => {
         if (row) {
             row.set('Trạng thái', newStatus); 
             await row.save();
-            console.log(`✅ Đã đồng bộ Sheet: ${email} -> ${newStatus}`);
+            console.log(` Đã đồng bộ Sheet: ${email} -> ${newStatus}`);
         } else {
-            console.log(`⚠️ Không tìm thấy Email ${email} trên Sheet để cập nhật trạng thái.`);
+            console.log(` Không tìm thấy Email ${email} trên Sheet để cập nhật trạng thái.`);
         }
     } catch (error) {
         console.error(">> Lỗi Google Sheet (Update Status):", error.message);

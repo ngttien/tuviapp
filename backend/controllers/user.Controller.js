@@ -27,7 +27,8 @@ exports.submitInfo = async (req, res) => {
     
     // 3. Gửi Email xác nhận "Đã nhận đơn"
     // Giúp khách hàng yên tâm là hệ thống đang xử lý
-    sendSuccessEmail(email, fullName)
+    //  ĐÃ SỬA CHỖ NÀY: Truyền toàn bộ req.body chứa full thông tin vào hàm gửi mail
+    sendSuccessEmail(req.body)
         .catch(err => console.error(" Lỗi gửi mail xác nhận:", err.message));
 
     // 4. TRẢ KẾT QUẢ VỀ FRONTEND NGAY LẬP TỨC

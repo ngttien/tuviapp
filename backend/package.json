@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
-"scripts": {
-  "start": "node server.js",
-  "worker": "node workers/geminiWorker.js",
-  "frontend": "cd ../frontend && npm run dev",
-  "all": "concurrently \"npm run start\" \"npm run worker\" \"npm run frontend\""
-},
+  "scripts": {
+    "start": "nodemon server.js",
+    "worker": "node workers/geminiWorker.js",
+    "login": "node login.js",
+    "frontend": "cd ../frontend && npm run dev -- --open",
+    "all": "concurrently -k -n \"SERVER,WORKER,WEB\" -c \"blue.bold,magenta.bold,green.bold\" \"npm run start\" \"npm run worker\" \"npm run frontend\""
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -23,6 +24,7 @@
     "googleapis": "^170.1.0",
     "lunar-javascript": "^1.7.7",
     "nodemailer": "^7.0.12",
+    "p-queue": "^9.1.0",
     "pdfkit": "^0.17.2",
     "pg": "^8.13.1",
     "playwright": "^1.58.0",

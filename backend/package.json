@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "nodemon server.js",
+    "start": "node server.js",
     "worker": "node workers/geminiWorker.js",
     "login": "node login.js",
     "frontend": "cd ../frontend && npm run dev -- --open",

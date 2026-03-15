@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  # Backend và Bot Worker
+  backend:
+    build: ./backend
+    container_name: tuvi_backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      # Lưu lại dữ liệu đăng nhập Google để không phải login lại nhiều lần
+      - ./backend/gemini-profile-data:/app/gemini-profile-data
+    restart: always
+
+  # Frontend (Nếu Tiên muốn chạy chung luôn)
+  frontend:
+    build: ./frontend
+    container_name: tuvi_frontend
+    ports:
+      - "5173:5173"
+    restart: always

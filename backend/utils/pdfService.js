@@ -1,232 +1,270 @@
-// backend/utils/pdfService.js
-const PDFDocument = require('pdfkit');
-const path = require('path');
-const fs = require('fs');
+const PDFDocument = require("pdfkit");
+const path = require("path");
+const fs = require("fs");
 
 class PDFService {
-    constructor() {
-        this.fontRegular = path.join(__dirname, '../assets/fonts/BeVietnamPro-Regular.ttf');
-        this.fontBold = path.join(__dirname, '../assets/fonts/BeVietnamPro-Bold.ttf');
-        this.logoPath = path.join(__dirname, '../assets/images/logo_tps.jpg'); 
-        this.bgPath = path.join(__dirname, '../assets/images/hoa-van-trong-dong-9.png'); 
-    }
 
-    async generateUltimateReport(userInfo, allChapters) {
-        return new Promise((resolve, reject) => {
-            try {
-                const doc = new PDFDocument({
-                    margin: 50,
-                    size: 'A4',
-                    bufferPages: true 
-                });
+constructor(){
 
-                let fileName = `HoSo_ChuyenSau_${userInfo.fullName ? userInfo.fullName.replace(/\s/g, '_') : 'KhachHang'}_${Date.now()}.pdf`;
-                
-                const reportsDir = path.join(__dirname, '../assets/reports');
-                if (!fs.existsSync(reportsDir)) fs.mkdirSync(reportsDir, { recursive: true });
-                
-                let filePath = path.join(reportsDir, fileName);
-                let stream = fs.createWriteStream(filePath);
+this.fontRegular = path.join(__dirname,"../assets/fonts/BeVietnamPro-Regular.ttf");
+this.fontBold = path.join(__dirname,"../assets/fonts/BeVietnamPro-Bold.ttf");
 
-                doc.pipe(stream);
+this.logo = path.join(__dirname,"../assets/images/logo_tps.jpg");
+this.bg = path.join(__dirname,"../assets/images/hoa-van-trong-dong-9.png");
 
-                // --- VẼ ẢNH NỀN CHO TẤT CẢ CÁC TRANG ---
-                this._drawBackground(doc);
-                doc.on('pageAdded', () => {
-                    this._drawBackground(doc);
-                });
-
-                // --- 1. TRANG BÌA CẤP CAO ---
-                this._drawCover(doc, userInfo);
-
-                // --- 2. DÀN TRANG NỘI DUNG TỪ GEMINI ---
-                if (allChapters && allChapters.length > 0) {
-                    this._parseAndDrawContent(doc, allChapters[0].content);
-                }
-
-                // --- 3. BẢNG THỐNG KÊ & LIÊN HỆ TPS ---
-                this._drawSummaryDashboard(doc, userInfo);
-
-                // --- 4. ĐÁNH SỐ TRANG & FOOTER ---
-                this._finalizeReport(doc, userInfo);
-
-                doc.end();
-                stream.on('finish', () => resolve(fs.readFileSync(filePath))); 
-            } catch (err) {
-                reject(err);
-            }
-        });
-    }
-
-    _drawBackground(doc) {
-        if (fs.existsSync(this.bgPath)) {
-            doc.save(); 
-            doc.opacity(0.12); 
-            
-            // ÉP GIÃN FULL TRANG A4 - XÓA SẠCH VIỀN TRẮNG
-            doc.image(this.bgPath, 0, 0, { 
-                width: doc.page.width, 
-                height: doc.page.height 
-            });
-            doc.restore(); 
-        }
-    }
-
-    _drawCover(doc, userInfo) {
-        if (fs.existsSync(this.logoPath)) {
-            doc.image(this.logoPath, 50, 40, { width: 150 });
-        } else {
-            doc.font(this.fontBold).fontSize(14).fillColor('#1e293b').text('TPS THÀNH PHONG', 50, 50);
-        }
-
-        doc.moveDown(8);
-        
-        doc.fillColor('#d97706').font(this.fontBold).fontSize(18)
-           .text('THUẬN THỜI HIẾU MỆNH - VẠN SỰ HANH THÔNG', { align: 'center', characterSpacing: 1 });
-        
-        doc.moveDown(1);
-        
-        doc.fillColor('#1e3a8a').font(this.fontBold).fontSize(30)
-           .text('HỒ SƠ LUẬN GIẢI CHIẾN LƯỢC', { align: 'center' });
-        doc.fillColor('#1e3a8a').font(this.fontBold).fontSize(26)
-           .text('21 NGÀY CHUYÊN SÂU', { align: 'center' });
-
-        doc.moveDown(2);
-        doc.moveTo(150, doc.y).lineTo(445, doc.y).strokeColor('#d97706').lineWidth(2).stroke();
-        doc.moveDown(2);
-
-        doc.fillColor('#1e293b').font(this.fontBold).fontSize(24)
-           .text(userInfo.full_name || userInfo.fullName || 'Khách Hàng VIP', { align: 'center' });
-        doc.moveDown(0.5);
-        doc.font(this.fontRegular).fontSize(16)
-           .text(`Ngày sinh: ${userInfo.dob || 'Đã bảo mật'}`, { align: 'center' });
-        doc.moveDown(0.5);
-        doc.font(this.fontRegular).fontSize(14)
-           .text(`Được phân tích bởi: Hệ Thống AI - TPS Thành Phong`, { align: 'center' });
-    }
-
-    _parseAndDrawContent(doc, text) {
-        // Cắt bỏ khoảng trắng thừa ở đầu và cuối bài để tránh sinh trang ảo
-        const lines = text.trim().split('\n');
-        doc.addPage(); 
-
-        let isFirstHeading = true; // Biến cờ bảo vệ chống ngắt trang trống
-
-        for (const line of lines) {
-            const cleanLine = line.trim();
-            if (!cleanLine) {
-                doc.moveDown(0.6);
-                continue;
-            }
-
-            if (cleanLine.startsWith('# ')) {
-                // CHỈ ngắt trang nếu ĐÃ QUA tiêu đề đầu tiên
-                if (!isFirstHeading) {
-                    doc.addPage();
-                }
-                isFirstHeading = false; 
-
-                doc.moveDown(1);
-                doc.fillColor('#1e3a8a').font(this.fontBold).fontSize(22)
-                   .text(cleanLine.replace('# ', '').replace(/\*\*/g, ''), { align: 'center' });
-                doc.moveDown(1);
-                doc.moveTo(100, doc.y).lineTo(495, doc.y).strokeColor('#e2e8f0').lineWidth(1.5).stroke();
-                doc.moveDown(2);
-            } 
-            else if (cleanLine.startsWith('## ')) {
-                // Ép rớt trang thật sâu (y > 700) mới cho qua trang mới
-                if (doc.y > 700) doc.addPage(); 
-                else doc.moveDown(1.5);
-                
-                doc.fillColor('#d97706').font(this.fontBold).fontSize(18)
-                   .text(cleanLine.replace('## ', '').replace(/\*\*/g, ''));
-                doc.moveDown(0.8);
-            } 
-            else if (cleanLine.startsWith('### ')) {
-                if (doc.y > 730) doc.addPage(); 
-                else doc.moveDown(1);
-
-                doc.fillColor('#1e293b').font(this.fontBold).fontSize(15)
-                   .text(cleanLine.replace('### ', '').replace(/\*\*/g, ''));
-                doc.moveDown(0.5);
-            }
-            else if (cleanLine.startsWith('- ') || cleanLine.startsWith('* ')) {
-                doc.fillColor('#334155').font(this.fontRegular).fontSize(14)
-                   .text('    • ' + cleanLine.substring(2).replace(/\*\*/g, ''), { lineGap: 8, align: 'justify' });
-            } 
-            else {
-                if (cleanLine.startsWith('**') && cleanLine.endsWith('**')) {
-                    doc.fillColor('#1e293b').font(this.fontBold).fontSize(14)
-                       .text(cleanLine.replace(/\*\*/g, ''), { lineGap: 8, align: 'justify' });
-                } else {
-                    doc.fillColor('#334155').font(this.fontRegular).fontSize(14)
-                       .text(cleanLine.replace(/\*\*/g, ''), { lineGap: 8, align: 'justify' });
-                }
-            }
-        }
-    }
-
-    _drawSummaryDashboard(doc, userInfo) {
-        // Tối ưu để không đẻ thêm trang trắng ở đoạn cuối
-        if (doc.y > 450) {
-            doc.addPage();
-        } else {
-            doc.moveDown(3);
-        }
-        
-        doc.rect(50, doc.y, 495, 260).fill('#fffbeb');
-        
-        doc.moveDown(2);
-        doc.fillColor('#d97706').font(this.fontBold).fontSize(22)
-           .text('TỔNG KẾT & CAM KẾT ĐỒNG HÀNH', { align: 'center' });
-        doc.moveDown(2);
-
-        const leftX = 80;
-        const rightX = 200;
-
-        doc.font(this.fontBold).fontSize(14).fillColor('#1e293b');
-        
-        const drawRow = (label, value, yPos) => {
-            doc.text(label, leftX, yPos);
-            doc.font(this.fontRegular).text(value, rightX, yPos, { width: 310, align: 'left' });
-            doc.moveTo(leftX, yPos + 25).lineTo(500, yPos + 25).strokeColor('#fcd34d').lineWidth(1).stroke();
-            doc.font(this.fontBold); 
-        };
-
-        let currentY = doc.y;
-        drawRow('Chủ sở hữu:', userInfo.full_name || userInfo.fullName || 'Khách Hàng', currentY);
-        drawRow('Đơn vị phân tích:', 'Hệ Thống AI - TPS Thành Phong', currentY + 40);
-        drawRow('Mục tiêu chiến lược:', userInfo.goal || 'Phát triển sự nghiệp & Tài chính', currentY + 80);
-
-        doc.moveDown(5);
-        doc.fillColor('#1e3a8a').font(this.fontBold).fontSize(18).text('THÔNG TIN LIÊN HỆ', leftX);
-        doc.font(this.fontRegular).fontSize(14).fillColor('#334155').moveDown(1);
-        
-        doc.text('TPS Thành Phong Corporation', leftX);
-        doc.text('VPGD: 31B Đường số 23, P.Hiệp Bình Chánh, Q.Thủ Đức, TP.HCM', leftX);
-        doc.text('Website: www.thanhphong.vn', leftX);
-
-        doc.moveDown(4);
-        doc.font(this.fontBold).fontSize(16).fillColor('#d97706').text('THUẬN THỜI HIẾU MỆNH - VẠN SỰ HANH THÔNG', { align: 'center' });
-    }
-
-    _finalizeReport(doc, userInfo) {
-        const pages = doc.bufferedPageRange();
-        for (let i = 0; i < pages.count; i++) {
-            doc.switchToPage(i);
-            
-            doc.font(this.fontBold).fontSize(10).fillColor('#d97706')
-               .text('Thuận Thời Hiếu Mệnh', 50, doc.page.height - 40, { align: 'left' });
-               
-            doc.font(this.fontRegular).fontSize(10).fillColor('#94a3b8')
-               .text(
-                   `Tài liệu bảo mật của ${userInfo.full_name || userInfo.fullName} | Trang ${i + 1} / ${pages.count}`,
-                   50,
-                   doc.page.height - 40,
-                   { align: 'right' }
-               );
-        }
-    }
+this.colors={
+navy:"#0a192f",
+gold:"#d4af37",
+white:"#ffffff",
+text:"#e5e7eb"
 }
 
-module.exports = new PDFService();
+}
+
+async generateUltimateReport(userInfo,allChapters){
+
+return new Promise((resolve,reject)=>{
+
+try{
+
+const doc=new PDFDocument({
+size:"A4",
+margin:50
+})
+
+const reportsDir=path.join(__dirname,"../assets/reports")
+
+if(!fs.existsSync(reportsDir)){
+fs.mkdirSync(reportsDir,{recursive:true})
+}
+
+const filePath=path.join(reportsDir,`report_${Date.now()}.pdf`)
+const stream=fs.createWriteStream(filePath)
+
+doc.pipe(stream)
+
+/* COVER */
+this.drawBackground(doc)
+this.drawHeader(doc)
+this.drawCover(doc,userInfo)
+
+/* CONTENT */
+if(allChapters && allChapters.length>0){
+this.drawContent(doc,allChapters[0].content)
+}
+
+doc.end()
+
+stream.on("finish",()=>{
+const buffer=fs.readFileSync(filePath)
+resolve(buffer)
+})
+
+}catch(err){
+reject(err)
+}
+
+})
+
+}
+
+/* ================= BACKGROUND ================= */
+
+drawBackground(doc){
+
+doc.save()
+
+doc.rect(0,0,doc.page.width,doc.page.height)
+.fillColor(this.colors.navy)
+.fill()
+
+if(fs.existsSync(this.bg)){
+
+doc.image(this.bg,0,0,{
+width:doc.page.width,
+height:doc.page.height
+})
+
+doc.rect(0,0,doc.page.width,doc.page.height)
+.fillColor(this.colors.navy)
+.fillOpacity(.65)
+.fill()
+
+}
+
+doc.restore()
+
+}
+
+/* ================= HEADER ================= */
+
+drawHeader(doc){
+
+if(fs.existsSync(this.logo)){
+doc.image(this.logo,50,40,{width:70})
+}
+
+doc.fillColor(this.colors.white)
+.font(this.fontBold)
+.fontSize(15)
+.text("CÔNG TY CỔ PHẦN TPS THÀNH PHONG",130,45)
+
+doc.font(this.fontRegular)
+.fontSize(10)
+.fillColor(this.colors.text)
+.text("VPGD: 31B Đường số 23, P.Hiệp Bình Chánh, Q.Thủ Đức, TP.HCM",130)
+.text("Điện thoại: (08) 3848 7933 – 3848 7553")
+.text("www.thanhphong.vn")
+
+}
+
+/* ================= COVER ================= */
+
+drawCover(doc,userInfo){
+
+const name=(userInfo.fullName || userInfo.full_name || "KHÁCH HÀNG VIP").toUpperCase()
+
+const dob = userInfo.dob
+? new Date(userInfo.dob).toLocaleDateString("vi-VN")
+: "Bảo mật"
+
+const tob = userInfo.tob || "Chưa cung cấp"
+const gender = userInfo.gender || "Chưa cung cấp"
+const goal = userInfo.goal || "Chưa cung cấp"
+const email = userInfo.email || "Không có"
+const desc = userInfo.description || "Không có"
+
+doc.moveDown(6)
+
+doc.fillColor(this.colors.gold)
+.font(this.fontBold)
+.fontSize(22)
+.text("THUẬN THỜI HIỂU MỆNH - VẠN SỰ HANH THÔNG",{align:"center"})
+
+doc.moveDown(2)
+
+doc.fillColor(this.colors.white)
+.font(this.fontBold)
+.fontSize(42)
+.text("HỒ SƠ LUẬN GIẢI",{align:"center"})
+
+doc.text("CHIẾN LƯỢC",{align:"center"})
+
+doc.fillColor(this.colors.gold)
+.fontSize(24)
+.text("21 NGÀY CHUYÊN SÂU",{align:"center"})
+
+doc.moveDown(3)
+
+doc.fillColor(this.colors.white)
+.fontSize(30)
+.text(name,{align:"center"})
+
+doc.moveDown(2)
+
+doc.font(this.fontRegular)
+.fontSize(14)
+.fillColor(this.colors.text)
+
+doc.text(`Ngày sinh: ${dob}`,{align:"center"})
+doc.text(`Giờ sinh: ${tob}`,{align:"center"})
+doc.text(`Giới tính: ${gender}`,{align:"center"})
+doc.text(`Mục tiêu: ${goal}`,{align:"center"})
+doc.text(`Email: ${email}`,{align:"center"})
+
+doc.moveDown(1)
+
+doc.text(`Mô tả: ${desc}`,{
+align:"center",
+width:400
+})
+
+doc.addPage()
+
+this.drawBackground(doc)
+this.drawHeader(doc)
+
+doc.y=150
+
+}
+
+/* ================= CONTENT ================= */
+
+drawContent(doc,text){
+
+if(!text) return
+
+const lines=text.replace(/\n{2,}/g,"\n").split("\n")
+
+for(const rawLine of lines){
+
+const line=rawLine.trim()
+
+if(!line){
+doc.moveDown(.5)
+continue
+}
+
+/* PAGE BREAK */
+
+if(doc.y > doc.page.height - 90){
+
+doc.addPage()
+
+this.drawBackground(doc)
+this.drawHeader(doc)
+
+doc.y=150
+
+}
+
+/* TITLE */
+
+if(line.startsWith("#")){
+
+doc.moveDown(1)
+
+doc.fillColor(this.colors.gold)
+.font(this.fontBold)
+.fontSize(22)
+.text(
+line.replace(/^#+/,""),
+50,
+doc.y,
+{
+width:495,
+align:"left"
+}
+)
+
+doc.moveDown(.8)
+
+}
+
+/* NORMAL TEXT */
+
+else{
+
+doc.fillColor(this.colors.white)
+.font(this.fontRegular)
+.fontSize(13)
+.text(
+line.replace(/\*\*/g,""),
+50,
+doc.y,
+{
+width:495,
+align:"justify",
+lineGap:6
+}
+)
+
+}
+
+}
+
+}
+
+}
+
+module.exports=new PDFService()

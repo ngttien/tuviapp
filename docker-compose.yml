@@ -10,6 +10,7 @@ services:
       - ./backend/.env
     volumes:
       - ./backend/gemini-profile-data:/app/gemini-profile-data
+      - ./backend/config:/app/config
     restart: always
 
   frontend:

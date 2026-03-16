@@ -13,7 +13,7 @@ const routes = require("./routes/index.route");
 const app = express();
 dotenv.config();
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5000;
 
 // --- 1. MIDDLEWARE (Bộ lọc bảo vệ & Xử lý dữ liệu) ---
 app.use(

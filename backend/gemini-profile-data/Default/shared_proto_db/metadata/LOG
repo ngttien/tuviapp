@@ -1,3 +1,2 @@
-2026/03/15-14:41:41.414 5ac8 Reusing MANIFEST D:\TPS\1\backend\gemini-profile-data\Default\shared_proto_db\metadata/MANIFEST-000001
-2026/03/15-14:41:41.414 5ac8 Recovering log #3
-2026/03/15-14:41:41.415 5ac8 Reusing old log D:\TPS\1\backend\gemini-profile-data\Default\shared_proto_db\metadata/000003.log 
+2026/03/16-19:19:03.426 67ac Creating DB D:\TPS\1\backend\gemini-profile-data\Default\shared_proto_db\metadata since it was missing.
+2026/03/16-19:19:03.437 67ac Reusing MANIFEST D:\TPS\1\backend\gemini-profile-data\Default\shared_proto_db\metadata/MANIFEST-000001

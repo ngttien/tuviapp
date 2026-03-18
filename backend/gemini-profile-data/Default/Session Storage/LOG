@@ -1,3 +1,2 @@
-2026/03/15-14:41:42.499 2208 Reusing MANIFEST D:\TPS\1\backend\gemini-profile-data\Default\Session Storage/MANIFEST-000001
-2026/03/15-14:41:42.500 2208 Recovering log #3
-2026/03/15-14:41:42.500 2208 Reusing old log D:\TPS\1\backend\gemini-profile-data\Default\Session Storage/000003.log 
+2026/03/16-19:19:04.058 4154 Creating DB D:\TPS\1\backend\gemini-profile-data\Default\Session Storage since it was missing.
+2026/03/16-19:19:04.063 4154 Reusing MANIFEST D:\TPS\1\backend\gemini-profile-data\Default\Session Storage/MANIFEST-000001

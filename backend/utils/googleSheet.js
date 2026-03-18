@@ -1,7 +1,8 @@
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { Solar } = require('lunar-javascript');
-const creds = require('../config/service-account.json');
+//const creds = require('../config/service-account.json');
+const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
 const SHEET_ID = '1QeO5b7Y3rNd0dufZ1zCNvwsISdtptifIqpUAjtfPG2M'; 
 
@@ -9,9 +10,14 @@ const CAN = ['Canh', 'Tân', 'Nhâm', 'Quý', 'Giáp', 'Ất', 'Bính', 'Đinh',
 const CHI = ['Thân', 'Dậu', 'Tuất', 'Hợi', 'Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi'];
 
 // --- Má gom phần Auth lại dùng chung cho đỡ dài dòng ---
+//const getAuth = () => new JWT({
+  //  email: creds.client_email,
+    //key: creds.private_key,
+    //scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+//});
 const getAuth = () => new JWT({
-    email: creds.client_email,
-    key: creds.private_key,
+    email: serviceAccount.client_email, // Đúng: dùng biến serviceAccount ở trên
+    key: serviceAccount.private_key,   // Đúng: dùng biến serviceAccount ở trên
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 

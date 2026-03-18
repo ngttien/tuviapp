@@ -28,7 +28,7 @@ async function getHoroscopeImage(userData) {
 
     // --- 2. KHỞI ĐỘNG TRÌNH DUYỆT ---
     const browser = await chromium.launch({ 
-        headless: false, // Để false để bạn nhìn thấy nó chạy lần đầu, sau này đổi thành true
+        headless: true, // Để false để bạn nhìn thấy nó chạy lần đầu, sau này đổi thành true
         args: ['--start-maximized'] 
     });
     

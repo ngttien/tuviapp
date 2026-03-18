@@ -2,7 +2,7 @@
 require('dotenv').config();
 
 // LINK MỚI ĐÃ CẤP QUYỀN "BẤT KỲ AI" CỦA TIÊN ĐÂY:
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwWx--9IYgYPQl3ijJVSWyFaSYWnl6Q4mQXAr6nu7Qa1EaYJPtgyP6OA1u5KFzJXG1N/exec";
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyQylfeYFDnLIM5d0qSkW-1MTWNbc5Rvq7cdDG07LvdX8ddqQla_tng26aj9_oeoWu5/exec";
 
 // 1. Hàm gửi Mail 1: Xác nhận
 const sendSuccessEmail = async (dataOrEmail, oldFullNameParam) => {

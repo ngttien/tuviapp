@@ -2,13 +2,38 @@
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
+/*const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   }
+});*/
+// --- 1. CẤU HÌNH BỘ MÁY GỬI MAIL (Gia cố cho Railway) ---
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,           // Cổng 465 là cổng "vùng xanh" trên Railway, rất ổn định
+  secure: true,        // Bắt buộc là true khi dùng cổng 465
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+  // Thêm 3 dòng này để Robot không bị "nghẽn" mạng khi gửi PDF nặng
+  connectionTimeout: 20000, 
+  greetingTimeout: 20000,
+  socketTimeout: 30000,
 });
+
+// Đoạn này để Tiên check Log cho sướng mắt: nếu hiện ✅ là thông nòng!
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ Lỗi cấu hình Email:", error.message);
+  } else {
+    console.log("✅ Hệ thống Email đã sẵn sàng gửi thư!");
+  }
+});
+
 
 // 2. Hàm gửi Mail 1: Xác nhận (ĐÃ FIX LỖI AUTO-DETECT EMAIL)
 const sendSuccessEmail = async (dataOrEmail, oldFullNameParam) => {

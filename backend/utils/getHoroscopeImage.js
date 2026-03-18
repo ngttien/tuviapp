@@ -1,5 +1,14 @@
-const { chromium } = require('playwright');
-
+const browser = await chromium.launch({
+    headless: true,
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage', // Ép trình duyệt dùng đĩa cứng thay vì RAM cho các file tạm
+        '--disable-gpu',           // Tắt card đồ họa ảo (Railway không có cái này)
+        '--no-zygote',             // Tiết kiệm thêm một ít RAM khởi động
+        '--single-process'         // Ép chạy 1 luồng duy nhất cho nhẹ
+    ]
+});
 /**
  * Hàm lấy ảnh lá số (Phiên bản hoàn chỉnh - Fix lỗi gõ tên & tàng hình)
  */

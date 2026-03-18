@@ -2,26 +2,21 @@
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 
-/*const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});*/
-// --- 1. CẤU HÌNH BỘ MÁY GỬI MAIL (Gia cố cho Railway) ---
+// --- 1. CẤU HÌNH BỘ MÁY GỬI MAIL (CHỐNG TIMEOUT TRÊN RAILWAY) ---
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  host: 'smtp.gmail.com',
-  port: 465,           // Cổng 465 là cổng "vùng xanh" trên Railway, rất ổn định
-  secure: true,        // Bắt buộc là true khi dùng cổng 465
+  host: 'smtp.gmail.com', // Lưu ý: Tui đã XÓA dòng service: 'gmail' đi rồi nhen
+  port: 465,
+  secure: true, 
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  // Thêm 3 dòng này để Robot không bị "nghẽn" mạng khi gửi PDF nặng
-  connectionTimeout: 20000, 
-  greetingTimeout: 20000,
+  tls: {
+    // ĐÂY LÀ CÁI "KHIÊN" ĐỂ VƯỢT TƯỜNG LỬA RAILWAY NÈ TIÊN:
+    rejectUnauthorized: false 
+  },
+  connectionTimeout: 30000, 
+  greetingTimeout: 30000,
   socketTimeout: 30000,
 });
 

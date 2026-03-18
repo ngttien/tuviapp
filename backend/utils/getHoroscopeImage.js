@@ -1,52 +1,59 @@
 const { chromium } = require('playwright');
 
 /**
- * Hàm lấy ảnh lá số (Phiên bản Robust - Chống lỗi undefined)
+ * Hàm lấy ảnh lá số (Phiên bản hoàn chỉnh - Fix lỗi gõ tên & tàng hình)
  */
 async function getHoroscopeImage(userData) {
-    // --- 1. CHUẨN HÓA DỮ LIỆU (FIX LỖI UNDEFINED Ở ĐÂY) ---
-    // Tìm mọi biến thể có thể có của tên
+    // --- 1. CHUẨN HÓA DỮ LIỆU ---
     const fullName = userData.full_name || userData.fullName || userData['Họ tên'] || '';
-    
-    // Xử lý ngày sinh (ưu tiên dob, nếu không có thì lấy 'Ngày sinh')
     const dob = userData.dob || userData['Ngày sinh'] || ''; 
-    
-    // Xử lý giờ sinh
     const tob = userData.tob || userData['Giờ sinh'] || '00:00';
     
-    // Xử lý giới tính (chấp nhận cả 'male', 'Nam', '1')
     let genderInput = userData.gender || userData['Giới tính'] || 'male';
     if (typeof genderInput === 'string') genderInput = genderInput.toLowerCase();
     const isMale = (genderInput === 'male' || genderInput === 'nam' || genderInput === '1');
 
     console.log(`📸 [Playwright] Đang xử lý: Tên="${fullName}" | Ngày="${dob}" | Giờ="${tob}" | Nam?=${isMale}`);
 
-    // Kiểm tra an toàn: Nếu không có tên thì dừng luôn, đỡ mở trình duyệt tốn RAM
     if (!fullName) {
-        throw new Error(" Dữ liệu đầu vào thiếu Tên (full_name/fullName)!");
+        throw new Error("Dữ liệu đầu vào thiếu Tên (full_name/fullName)!");
     }
 
-    // --- 2. KHỞI ĐỘNG TRÌNH DUYỆT ---
+    // --- 2. KHỞI ĐỘNG TRÌNH DUYỆT (Chuẩn cấu hình Railway) ---
     const browser = await chromium.launch({ 
-        headless: true, // Để false để bạn nhìn thấy nó chạy lần đầu, sau này đổi thành true
-        args: ['--start-maximized'] 
+        headless: true, 
+        args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox', 
+            '--disable-dev-shm-usage',
+            '--disable-gpu'
+        ]
     });
     
-    // Tạo context để tránh lưu cache cũ
-    const context = await browser.newContext();
+    // Đã gộp userAgent vào đúng dấu ngoặc để web không chặn Robot
+    const context = await browser.newContext({
+        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        viewport: { width: 1280, height: 800 }
+    });
     const page = await context.newPage();
 
     try {
         console.log("... Đang truy cập tuvi.vn");
-        await page.goto('https://tuvi.vn/lap-la-so-tu-vi', { timeout: 60000 });
+        await page.goto('https://tuvi.vn/lap-la-so-tu-vi', { 
+            waitUntil: 'networkidle', 
+            timeout: 90000 
+        });
 
-        // --- 3. ĐIỀN FORM (Dùng biến đã chuẩn hóa) ---
+        // --- 3. ĐIỀN FORM ---
         
-        // Nhập tên
-        await page.locator('input[name="name"]').fill(fullName);
+        console.log("... Đang đợi ô nhập tên hiện ra");
+        // DÒNG ĐỢI: Chắc chắn ô nhập liệu đã sẵn sàng
+        await page.waitForSelector('input[name="name"]', { state: 'visible', timeout: 30000 });
+        
+        // DÒNG GÕ: Ra lệnh cho Robot điền tên khách hàng vào
+        await page.locator('input[name="name"]').fill(fullName); 
 
-        // Xử lý ngày tháng năm sinh từ chuỗi "YYYY-MM-DD" hoặc "DD/MM/YYYY"
-        // Code của bạn đang giả định input là Date object hoặc string chuẩn ISO
+        // Xử lý ngày tháng năm sinh
         const dateObj = new Date(dob);
         if (isNaN(dateObj.getTime())) {
              throw new Error(`Định dạng ngày sinh không hợp lệ: ${dob}`);
@@ -68,10 +75,8 @@ async function getHoroscopeImage(userData) {
         await page.selectOption('select[name="hourOfDOB"]', parseInt(hour).toString());
         
         try {
-            // Cố gắng chọn phút chính xác
             await page.selectOption('select[name="minOfDOB"]', parseInt(minute).toString());
         } catch (e) {
-            // Nếu web không có phút đó (ví dụ web chỉ có 0, 15, 30...), chọn 00
             await page.selectOption('select[name="minOfDOB"]', "0");
         }
 
@@ -87,22 +92,19 @@ async function getHoroscopeImage(userData) {
         await page.click('button[type="submit"]');
 
         console.log(" Đang đợi lá số hiện ra...");
-        // Đợi 5s cho chắc ăn (hoặc dùng waitForSelector nếu biết class của lá số)
         await page.waitForTimeout(5000); 
 
-        // Chụp toàn trang (Full Page) để lấy trọn lá số
+        // Chụp toàn trang để lấy trọn lá số
         const imageBuffer = await page.screenshot({ fullPage: true });
         
-        console.log(" Chụp thành công (Lưu vào RAM)!");
+        console.log("✅ Chụp thành công (Lưu vào RAM)!");
 
         await browser.close();
-        return imageBuffer; // Trả về RAM để Worker dùng tiếp
+        return imageBuffer; 
 
     } catch (error) {
-        console.error(" Lỗi Robot chụp ảnh:", error.message);
-        // Chụp ảnh màn hình lỗi để debug (tạo file debug-error.png)
-        await page.screenshot({ path: 'debug-error.png' }); 
-        await browser.close();
+        console.error("❌ Lỗi Robot chụp ảnh:", error.message);
+        if (browser) await browser.close(); // Đóng trình duyệt nếu bị lỗi
         throw error;
     }
 }

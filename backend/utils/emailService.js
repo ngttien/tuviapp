@@ -1,8 +1,8 @@
 // backend/utils/emailService.js
 require('dotenv').config();
 
-// ĐÂY LÀ TRẠM TRUNG CHUYỂN GOOGLE CỦA TIÊN NÈ (Đã dán sẵn link):
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyc5FZOa17ZYMq8P-Qsf3Q3RkJzw4_1odeTLSiT94DK3VS2G5W4Jk5CLgmECgiosdTz/exec";
+// LINK MỚI ĐÃ CẤP QUYỀN "BẤT KỲ AI" CỦA TIÊN ĐÂY:
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwWx--9IYgYPQl3ijJVSWyFaSYWnl6Q4mQXAr6nu7Qa1EaYJPtgyP6OA1u5KFzJXG1N/exec";
 
 // 1. Hàm gửi Mail 1: Xác nhận
 const sendSuccessEmail = async (dataOrEmail, oldFullNameParam) => {
@@ -14,7 +14,6 @@ const sendSuccessEmail = async (dataOrEmail, oldFullNameParam) => {
 
   const genderText = data.gender === 'male' ? 'Nam' : (data.gender === 'female' ? 'Nữ' : 'Không rõ');
 
-  // Giữ nguyên giao diện Email siêu đẹp của Tiên
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
       <h2 style="color: #d97706; text-align: center;">Xin chào ${fullName},</h2>
@@ -46,7 +45,6 @@ const sendSuccessEmail = async (dataOrEmail, oldFullNameParam) => {
 
   try {
     console.log(">> Đang gửi mail xác nhận qua Trạm Google...");
-    // Gọi Trạm trung chuyển để gửi mail thay vì dùng SMTP bị chặn
     const response = await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -69,7 +67,6 @@ const sendSuccessEmail = async (dataOrEmail, oldFullNameParam) => {
 
 // 2. Hàm gửi Mail 2: Gửi kết quả (Có file đính kèm)
 const sendResultEmail = async (userEmail, fullName, pdfBuffer) => {
-  // Giữ nguyên giao diện Email kết quả của Tiên
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
       <h2 style="color: #d97706; text-align: center;">Chúc mừng ${fullName},</h2>
@@ -85,7 +82,6 @@ const sendResultEmail = async (userEmail, fullName, pdfBuffer) => {
     </div>
   `;
 
-  // Mã hóa cái PDF thành dạng chữ (Base64) để chui lọt qua đường hầm Web
   const pdfBase64 = pdfBuffer.toString('base64');
   const pdfName = `Tu_Vi_Luan_Giai_${fullName.replace(/\s/g, '_')}.pdf`;
 
@@ -112,8 +108,6 @@ const sendResultEmail = async (userEmail, fullName, pdfBuffer) => {
     console.error(">> Lỗi gửi mail 2 (Fetch):", error.message);
   }
 };
-
-
 
 module.exports = { sendSuccessEmail, sendResultEmail };
 /*// backend/utils/emailService.js

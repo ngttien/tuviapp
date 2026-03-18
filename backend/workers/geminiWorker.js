@@ -6,6 +6,7 @@ const { sendResultEmail } = require('../utils/emailService');
 const { updateSheetStatus } = require('../utils/googleSheet');
 const { getHoroscopeImage } = require('../utils/getHoroscopeImage');
 const { getMasterPrompt } = require('../data/systemPrompt');
+const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
 async function startGeminiWorker() {
 

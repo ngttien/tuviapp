@@ -9,7 +9,8 @@ const Review = ({ formData, onNext, onBack }) => {
     setIsSubmitting(true);
     try {
       // Gọi API thật ở đây
-      const response = await fetch('http://95.216.201.81:5000/api/user/submit', {
+      //const response = await fetch('http://95.216.201.81:5000/api/user/submit',
+      const response = await fetch('https://tuviapp-production.up.railway.app/api/user/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

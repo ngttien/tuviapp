@@ -26,14 +26,15 @@ async function getHoroscopeImage(userData) {
         // --- 2. KHỞI ĐỘNG TRÌNH DUYỆT (Cấu hình "ép mỡ" chuẩn của Tiên) ---
         browser = await chromium.launch({ 
             headless: true, 
-            args: [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox', 
-                '--disable-dev-shm-usage', // Ép dùng ổ cứng thay vì RAM
-                '--disable-gpu',
-                '--no-zygote',            // Tắt tiến trình con dư thừa
-                '--single-process'        // Chạy duy nhất 1 luồng cho nhẹ
-            ]
+    args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox', 
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-zygote',
+        '--single-process',
+        '--disable-set-privileged-capabilities'
+    ]
         });
         
         const context = await browser.newContext({

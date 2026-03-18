@@ -4,6 +4,11 @@ require('dotenv').config();
 // LINK MỚI ĐÃ CẤP QUYỀN "BẤT KỲ AI" CỦA TIÊN ĐÂY:
 const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyQylfeYFDnLIM5d0qSkW-1MTWNbc5Rvq7cdDG07LvdX8ddqQla_tng26aj9_oeoWu5/exec";
 
+/** * LƯU Ý QUAN TRỌNG: 
+ * Tiên tuyệt đối KHÔNG thêm dòng: const fetch = require('node-fetch') ở trên đầu nhé.
+ * Railway dùng Node.js mới đã có sẵn 'fetch' rồi, thêm vào là nó báo lỗi sập server ngay.
+ */
+
 // 1. Hàm gửi Mail 1: Xác nhận
 const sendSuccessEmail = async (dataOrEmail, oldFullNameParam) => {
   let userEmail = typeof dataOrEmail === 'string' ? dataOrEmail : dataOrEmail.email;
@@ -45,6 +50,7 @@ const sendSuccessEmail = async (dataOrEmail, oldFullNameParam) => {
 
   try {
     console.log(">> Đang gửi mail xác nhận qua Trạm Google...");
+    // Dùng fetch trực tiếp của Node.js (Không cần require)
     const response = await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -54,6 +60,7 @@ const sendSuccessEmail = async (dataOrEmail, oldFullNameParam) => {
         html: htmlContent
       })
     });
+    
     const result = await response.json();
     if (result.status === 'success') {
       console.log(">> ✅ Đã gửi mail thông báo tới: " + userEmail);
@@ -77,7 +84,7 @@ const sendResultEmail = async (userEmail, fullName, pdfBuffer) => {
       <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
       <p style="font-size: 12px; color: #666; text-align: center;">
         Hy vọng bản luận giải này sẽ giúp ích cho hành trình của bạn.<br>
-        <strong>Thuận Thời Hiếu Mệnh</strong>
+        <strong>Thuận Thời Hiểu Mệnh</strong>
       </p>
     </div>
   `;
@@ -98,6 +105,7 @@ const sendResultEmail = async (userEmail, fullName, pdfBuffer) => {
         pdfName: pdfName
       })
     });
+
     const result = await response.json();
     if (result.status === 'success') {
       console.log(">> ✅ Đã gửi mail kết quả (kèm file) tới: " + userEmail);

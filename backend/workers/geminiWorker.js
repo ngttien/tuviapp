@@ -8,6 +8,173 @@ const { getHoroscopeImage } = require('../utils/getHoroscopeImage');
 const { getMasterPrompt } = require('../data/systemPrompt');
 
 async function startGeminiWorker() {
+    console.log("🚀 [Worker] KHỞI ĐỘNG CHẾ ĐỘ XẾP HÀNG 1-BY-1");
+
+    const userDataDir = path.join(__dirname, '../../gemini-profile-data');
+    let context;
+
+    try {
+        context = await chromium.launchPersistentContext(userDataDir, {
+            headless: true,
+            args: [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--single-process", // Tiết kiệm RAM cho Railway
+                "--no-zygote"       // Giảm tải CPU
+            ]
+        });
+    } catch (err) {
+        console.error("❌ Lỗi trình duyệt:", err.message);
+        return;
+    }
+
+    const pageGemini = await context.newPage();
+
+    while (true) {
+        let request = null;
+        try {
+            /**
+             * BƯỚC QUAN TRỌNG: GẮP ĐÚNG 1 NGƯỜI
+             * Hàm findAndLockNext sẽ gắp 1 người, đổi ngay sang 'processing' 
+             * trong Database để Robot khác không thấy được người này nữa.
+             */
+            request = await User.findAndLockNext();
+
+            if (!request) {
+                console.log("💤 Không có đơn mới, nghỉ 10s nhen...");
+                await new Promise(r => setTimeout(r, 10000));
+                continue;
+            }
+
+            const clientName = request.full_name || "Khách hàng";
+            console.log(`\n-----------------------------------`);
+            console.log(`🎬 ĐANG XỬ LÝ (MAIL 2): ${clientName}`);
+
+            // Cập nhật trạng thái trên Google Sheet (Optional vì DB đã đổi rồi)
+            await updateSheetStatus(request.email, "PROCESSING");
+
+            // 1. LẤY LÁ SỐ
+            console.log("🔮 Bước 1: Chụp ảnh lá số...");
+            const imageBuffer = await getHoroscopeImage(request);
+
+            // 2. VÀO GEMINI VÀ LÀM SẠCH (Reset)
+            console.log("🌐 Bước 2: Reset Gemini cho người mới...");
+            await pageGemini.goto("https://gemini.google.com/app", { waitUntil: "domcontentloaded", timeout: 60000 });
+            
+            try {
+                // Nút "Cuộc trò chuyện mới" để AI không bị "ngáo" nội dung người cũ
+                await pageGemini.click('div[aria-label="Cuộc trò chuyện mới"]', { timeout: 5000 });
+                await pageGemini.waitForTimeout(2000);
+            } catch (e) {
+                console.log(" (Đã ở trang mới sạch sẽ)");
+            }
+
+            // 3. GỬI PROMPT & CHỜ AI "TUÔN SỚ"
+            const prompt = getMasterPrompt(request);
+            const geminiResponse = await askGeminiOneShot(pageGemini, prompt, imageBuffer);
+
+            // Kiểm tra độ dài: Nếu AI bị lỗi trả về quá ngắn (ví dụ < 1000 ký tự) thì báo lỗi
+            if (!geminiResponse || geminiResponse.length < 1000) {
+                throw new Error(`AI trả về nội dung quá ngắn (${geminiResponse?.length || 0} ký tự).`);
+            }
+
+            // 4. TẠO PDF VÀ GỬI MAIL 2 (Kết quả)
+            console.log("📄 Bước 3: Đang vẽ PDF...");
+            const chapters = [{ day: 1, title: "Luận Giải Chuyên Sâu", content: geminiResponse }];
+            const pdfBuffer = await pdfService.generateUltimateReport(request, chapters, imageBuffer);
+
+            console.log("📧 Bước 4: Gửi Email kết quả (Mail 2)...");
+            await sendResultEmail(request.email, clientName, pdfBuffer);
+
+            // 5. HOÀN THÀNH - GIẢI PHÓNG HÀNG ĐỢI
+            await User.updateStatus(request.id, "completed");
+            await updateSheetStatus(request.email, "DONE");
+
+            console.log(`✅ THÀNH CÔNG: Đã xong cho ${clientName}. Giờ mới đi tìm người tiếp theo!`);
+            console.log(`-----------------------------------\n`);
+
+        } catch (error) {
+            console.error(`❌ THẤT BẠI cho đơn ${request?.email}:`, error.message);
+            if (request) {
+                await User.updateStatus(request.id, "failed");
+                await updateSheetStatus(request.email, "FAILED");
+            }
+            // Nghỉ 5s cho Railway hồi RAM trước khi bốc người mới
+            await new Promise(r => setTimeout(r, 5000));
+        }
+    }
+}
+
+async function askGeminiOneShot(page, prompt, imageBuffer) {
+    await page.waitForSelector("div[contenteditable='true']", { timeout: 60000 });
+    const chatInput = page.locator("div[contenteditable='true']").first();
+    await chatInput.click();
+
+    // Upload ảnh lá số
+    if (imageBuffer) {
+        const base64 = imageBuffer.toString("base64");
+        await page.evaluate((b64) => {
+            const byteString = atob(b64);
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(new File([ab], "la_so.png", { type: "image/png" }));
+            document.querySelector("div[contenteditable='true']").dispatchEvent(
+                new ClipboardEvent("paste", { clipboardData: dataTransfer, bubbles: true })
+            );
+        }, base64);
+        await page.waitForTimeout(4000);
+    }
+
+    console.log("✍️ Đang gửi lệnh luận giải dài...");
+    await page.keyboard.insertText(prompt);
+    await page.keyboard.press("Enter");
+
+    let lastLen = 0;
+    let stableCount = 0;
+    console.log("⌛ Đang chờ AI viết (vui lòng đợi)...");
+
+    for (let i = 0; i < 60; i++) { // Đợi tối đa 5 phút
+        await page.waitForTimeout(5000);
+        const currentText = await page.evaluate(() => {
+            const el = document.querySelector(".model-response-text, [data-message-author-role='model'], .markdown-renderer");
+            return el ? el.innerText : "";
+        });
+
+        console.log(` 📝 Đã viết: ${currentText.length} ký tự...`);
+
+        // CHIẾN THUẬT: 15 giây không có chữ mới -> Coi như AI đã viết xong
+        if (currentText.length > 500 && currentText.length === lastLen) {
+            stableCount++;
+            if (stableCount >= 3) break; 
+        } else {
+            stableCount = 0;
+            lastLen = currentText.length;
+        }
+    }
+
+    const finalText = await page.evaluate(() => {
+        const els = document.querySelectorAll(".model-response-text, [data-message-author-role='model'], .markdown-renderer");
+        return els.length > 0 ? els[els.length - 1].innerText : "";
+    });
+
+    return finalText;
+}
+
+startGeminiWorker();
+/*const { chromium } = require('playwright');
+const path = require('path');
+const User = require('../models/userModel');
+const pdfService = require('../utils/pdfService');
+const { sendResultEmail } = require('../utils/emailService');
+const { updateSheetStatus } = require('../utils/googleSheet');
+const { getHoroscopeImage } = require('../utils/getHoroscopeImage');
+const { getMasterPrompt } = require('../data/systemPrompt');
+
+async function startGeminiWorker() {
     console.log("🚀 [Worker] KHỞI ĐỘNG CHẾ ĐỘ XỬ LÝ TUẦN TỰ (1-BY-1)");
 
     const userDataDir = path.join(__dirname, '../../gemini-profile-data');
@@ -162,7 +329,7 @@ async function askGeminiOneShot(page, prompt, imageBuffer) {
 }
 
 startGeminiWorker();
-
+*/
 /*const { chromium } = require('playwright');
 const path = require('path');
 const User = require('../models/userModel');

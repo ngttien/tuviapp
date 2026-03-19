@@ -17,20 +17,20 @@ exports.submitInfo = async (req, res) => {
     // 1. Lưu vào Database Neon
     // TIÊN CHỈNH CHỖ NÀY: Thêm status: "pending" vào object gửi đi
     const userData = await User.upsert({ 
-        ...req.body, 
-        request_uuid: req_uuid,
-        status: "pending", // ÉP TRẠNG THÁI PENDING ĐỂ WORKER NHẬN ĐƠN
-        note: note || ""
+        ...req.body,           // Lấy hết thông tin khách nhập
+        request_uuid: req_uuid, // Gắn mã định danh
+        status: "pending",     // QUAN TRỌNG: Gắn nhãn Đang đợi cho Robot thấy
+        note: note || ""       // Ghi chú thêm (nếu có)
     });
 
     // 2. Ghi Google Sheet (PENDING) - Chạy ngầm không bắt khách đợi
     appendToSheet({ ...req.body, uuid: req_uuid, status: "PENDING" })
         .then(() => console.log(`>> [OK] Đã ghi danh lên Google Sheet trạng thái PENDING`))
-        .catch(err => console.error("❌ Lỗi Google Sheet:", err.message));
+        .catch(err => console.error(" Lỗi Google Sheet:", err.message));
     
     // 3. Gửi Email xác nhận "Đã nhận đơn" - Chạy ngầm
     sendSuccessEmail(req.body)
-        .catch(err => console.error("❌ Lỗi gửi mail xác nhận:", err.message));
+        .catch(err => console.error(" Lỗi gửi mail xác nhận:", err.message));
 
     // 4. TRẢ KẾT QUẢ VỀ FRONTEND NGAY LẬP TỨC
     res.status(200).json({
@@ -42,13 +42,13 @@ exports.submitInfo = async (req, res) => {
     console.log(`=== [XONG] Đã bàn giao hồ sơ cho Robot Worker xử lý ngầm ===\n`);
 
   } catch (error) {
-    console.error("❌ Lỗi Controller chính:", error.message);
+    console.error(" Lỗi Controller chính:", error.message);
     if (!res.headersSent) {
         res.status(500).json({ success: false, message: "Lỗi hệ thống khi tiếp nhận hồ sơ" });
     }
   }
 };
-// --- CHỈ LÀM NHIỆM VỤ TIẾP NHẬN (LỄ TÂN) ---
+
 /*exports.submitInfo = async (req, res) => {
   try {
     const { fullName, email, note } = req.body;

@@ -3,8 +3,53 @@ const User = require("../models/userModel");
 const { appendToSheet } = require("../utils/googleSheet");
 const { sendSuccessEmail } = require("../utils/emailService");
 
-// --- CHỈ LÀM NHIỆM VỤ TIẾP NHẬN (LỄ TÂN) ---
+
+
+// ... (Giữ nguyên các phần require) ...
+
 exports.submitInfo = async (req, res) => {
+  try {
+    const { fullName, email, note } = req.body;
+    const req_uuid = uuidv4();
+
+    console.log(`\n=== [BƯỚC 1] TIẾP NHẬN HỒ SƠ: ${email} ===`);
+
+    // 1. Lưu vào Database Neon
+    // TIÊN CHỈNH CHỖ NÀY: Thêm status: "pending" vào object gửi đi
+    const userData = await User.upsert({ 
+        ...req.body, 
+        request_uuid: req_uuid,
+        status: "pending", // ÉP TRẠNG THÁI PENDING ĐỂ WORKER NHẬN ĐƠN
+        note: note || ""
+    });
+
+    // 2. Ghi Google Sheet (PENDING) - Chạy ngầm không bắt khách đợi
+    appendToSheet({ ...req.body, uuid: req_uuid, status: "PENDING" })
+        .then(() => console.log(`>> [OK] Đã ghi danh lên Google Sheet trạng thái PENDING`))
+        .catch(err => console.error("❌ Lỗi Google Sheet:", err.message));
+    
+    // 3. Gửi Email xác nhận "Đã nhận đơn" - Chạy ngầm
+    sendSuccessEmail(req.body)
+        .catch(err => console.error("❌ Lỗi gửi mail xác nhận:", err.message));
+
+    // 4. TRẢ KẾT QUẢ VỀ FRONTEND NGAY LẬP TỨC
+    res.status(200).json({
+      success: true,
+      message: "Hồ sơ đã được tiếp nhận! Robot Gemini đang bắt đầu luận giải, kết quả sẽ gửi vào email của bạn sau ít phút.",
+      data: { uuid: req_uuid }
+    });
+
+    console.log(`=== [XONG] Đã bàn giao hồ sơ cho Robot Worker xử lý ngầm ===\n`);
+
+  } catch (error) {
+    console.error("❌ Lỗi Controller chính:", error.message);
+    if (!res.headersSent) {
+        res.status(500).json({ success: false, message: "Lỗi hệ thống khi tiếp nhận hồ sơ" });
+    }
+  }
+};
+// --- CHỈ LÀM NHIỆM VỤ TIẾP NHẬN (LỄ TÂN) ---
+/*exports.submitInfo = async (req, res) => {
   try {
     const { fullName, email, note } = req.body;
     const req_uuid = uuidv4();
@@ -47,4 +92,4 @@ exports.submitInfo = async (req, res) => {
         res.status(500).json({ success: false, message: "Lỗi hệ thống khi tiếp nhận hồ sơ" });
     }
   }
-};
+};*/

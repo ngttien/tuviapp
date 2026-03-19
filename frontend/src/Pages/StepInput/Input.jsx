@@ -15,7 +15,7 @@ const Input = ({ formData, setFormData, onNext }) => {
 
   const handleCalendarToggle = (type) => {
     setFormData({ ...formData, calendarType: type });
-  };
+  }; 
 
   // Hàm kiểm tra hợp lệ
   const validateForm = () => {
